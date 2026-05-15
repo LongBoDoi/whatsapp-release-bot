@@ -1,0 +1,53 @@
+name: Release & Notify
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Add your real job steps here ──────────
+      - name: Your build step
+        run: echo "Running build for release ${{ github.event.release.tag_name }}..."
+
+      - name: Your deploy step
+        run: echo "Deploying..."
+      # ─────────────────────────────────────────
+
+      - name: Notify WhatsApp group (success)
+        if: success()
+        run: |
+          MESSAGE="✅ *Release deployed successfully!*
+
+          📦 Repo: ${{ github.repository }}
+          🏷 Version: ${{ github.event.release.tag_name }}
+          📝 ${{ github.event.release.name }}
+          👤 Released by: ${{ github.actor }}
+          🔗 ${{ github.event.release.html_url }}"
+
+          curl -s -X POST "${{ secrets.WHATSAPP_BOT_URL }}/notify" \
+            -H "Content-Type: application/json" \
+            -H "x-api-secret: ${{ secrets.WHATSAPP_BOT_SECRET }}" \
+            -d "{\"message\": $(echo "$MESSAGE" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}"
+
+      - name: Notify WhatsApp group (failure)
+        if: failure()
+        run: |
+          MESSAGE="❌ *Release job FAILED*
+
+          📦 Repo: ${{ github.repository }}
+          🏷 Version: ${{ github.event.release.tag_name }}
+          👤 Triggered by: ${{ github.actor }}
+          🔍 Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          curl -s -X POST "${{ secrets.WHATSAPP_BOT_URL }}/notify" \
+            -H "Content-Type: application/json" \
+            -H "x-api-secret: ${{ secrets.WHATSAPP_BOT_SECRET }}" \
+            -d "{\"message\": $(echo "$MESSAGE" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}"
